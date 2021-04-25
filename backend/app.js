@@ -153,6 +153,7 @@ app.get("/authorised/:user",  (req, res, next) => {
 
 app.get("/file/:fileName/:username", (req, res, next) => {
   console.log(req.params.username)
+  
   const secret = km.getSecret(req.params.username)
   console.log("Getting file:", req.params.fileName);
   const buffer = getEncryptedFile(path.join("./files", req.params.fileName), secret.key, secret.iv, req.params.username);

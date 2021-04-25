@@ -1,9 +1,9 @@
 var fs = require('fs');
 var crypto = require('crypto')
-const { generateKeyPair } = require('crypto');
+const { generateKeyPairSync } = require('crypto');
 
 function initKeyPair(){
-    generateKeyPair('rsa', {
+    const { publicKey, privateKey} = generateKeyPairSync('rsa', {
       modulusLength: 4096,
       publicKeyEncoding: {
         type: 'spki',
@@ -15,15 +15,15 @@ function initKeyPair(){
         cipher: 'aes-256-cbc',
         passphrase: 'top secret'
       }
-    }, (err, publicKey, privateKey) => {
-        fs.writeFileSync("publickey.pem", publicKey)
-        fs.writeFileSync("privatekey.pem", privateKey)
-        
-      return({
-          pubKey:  publicKey,
-          priKey: privateKey
-      })
     });
+    fs.writeFileSync("publickey.pem", publicKey)
+    fs.writeFileSync("privatekey.pem", privateKey)
+
+    
+    return {
+        pubKey: publicKey,
+        priKey: privateKey
+    }
 
 };
 
@@ -37,14 +37,9 @@ const getKeyPair = () => {
         })
     }
     else{
-        initKeyPair()
-        var publicKey = fs.readFileSync("publickey.pem")
-        var privateKey = fs.readFileSync("privateKey.pem")
-        
-        return({
-            pubKey:  publicKey,
-            priKey: privateKey
-        })
+        var keyPair = initKeyPair()
+        console.log(keyPair)
+        return(keyPair)
 
     }
     
@@ -78,8 +73,9 @@ function getSecret(username){
 }
 
 function encryptSecret(secret){
-    var publicKey = getKeyPair().pubKey
+    var keyPair = getKeyPair()
     var buffer = secret.key
+    var publicKey = keyPair.pubKey
     var encrypted = crypto.publicEncrypt(publicKey, buffer)
     return encrypted
 }
