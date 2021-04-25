@@ -6,6 +6,9 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import axios from 'axios';
 
+// react bootstrap stuff
+import ListGroup from 'react-bootstrap/ListGroup';
+
 class LoginForm extends React.Component{
 	constructor (props){
 		super(props);
@@ -15,7 +18,9 @@ class LoginForm extends React.Component{
 			files: [],
 			uploadFile: null,
 			addedUser: null,
-			removedUser: null
+			removedUser: null,
+			authorised:false,
+			users:[]
 		};
 		
 		
@@ -43,7 +48,6 @@ class LoginForm extends React.Component{
 	
 	// handles when the login button is pressed
 	handleLogin(event) {
-		alert(this.state.value + " logged in!");
 		console.log(this.state.value)
 		this.setState({loggedin: this.state.value});
 		event.preventDefault();
@@ -51,8 +55,22 @@ class LoginForm extends React.Component{
 		fetch('http://localhost:3010/api/files/'+this.state.value)
 		.then(response => response.json())
 		.then(data => this.setState({files: data.files}));
+
+		this.isAuthorised();
+		this.getSecureUsers();
 	}
 	
+	isAuthorised(){
+		fetch('http://localhost:3010/authorised/'+this.state.value)
+		.then(response => response.json())
+		.then(data => this.setState({authorised: data.authorised}));
+	}
+
+	getSecureUsers(){
+		fetch('http://localhost:3010/api/users/')
+		.then(response => response.json())
+		.then(data => this.setState({users: data.users}));
+	}
 	// handles change in file to be uploaded
 	onChangeHandler=event=>{
 		console.log(event.target.files[0])
@@ -66,6 +84,7 @@ class LoginForm extends React.Component{
 	onClickHandler = () => {
 		const data = new FormData()
 		data.append('file', this.state.uploadFile)
+		data.append('user', this.state.value)
 		axios.post("http://localhost:3010/upload/files", data, {})
 		.then(response => {
 			fetch('http://localhost:3010/api')
@@ -92,63 +111,96 @@ class LoginForm extends React.Component{
 		event.preventDefault();
 	}
 	
+
 	
 	
 	
 	render(){
+		var upload;
+		if(this.state.authorised){
+			upload=<div class="container">
+			<div class="row">
+				<div class="col-md-6">
+					<form method="post" action="#" id="#">
+						<div class="form-group files">
+							<label> &nbsp;Upload File</label>
+							<input type="file" name="file" class="form-control" multiple="" onChange={this.onChangeHandler}/>
+						</div>
+					</form>
+				</div>
+			</div>
+			<div id="upload" class="row">
+				<button class= "upload-button" type="button" class="btn btn-success btn-block" onClick={this.onClickHandler}>Upload</button>
+			</div>
+			<div id="user-interface"> 
+						<form onSubmit={this.handleUserUpload}>
+							<label>
+								Add user to group: &nbsp;
+								<input type="text" value ={this.state.addedUser}  onChange={this.handleUser}/>
+								&nbsp;
+							</label>
+							<input type="submit" value="Add User"/>
+						</form>
+						<form onSubmit={this.handleRemoveUser}>
+							<label>
+								Remove user from group: &nbsp;
+								<input type="text" value={this.state.removedUser} onChange={this.handleRemovedUser} />
+								&nbsp;
+							</label>
+							<input type="submit" value="Remove User"/>
+						</form>
+					</div>
+		</div>
+		}else{
+			upload=<div>
+				<p>Because you are not part of the secure group, the upload and secure group administration sections have been disabled.</p>
+			</div>
+		}
+
 		if(this.state.loggedin == 'null'){
 			return(
-				<div>
-					<form onSubmit = {this.handleLogin}>
-						<label>
-							Username: 
-							<input type="text" value={this.state.value} 
-								onChange={this.handleChange}/>
-						</label>
-						<input type="submit" value="Login"/>
+				<div id="login-parent">
+					<form id="login" onSubmit = {this.handleLogin}>
+						<div class="row">
+							<label>
+								Username: &nbsp;
+								<input type="text" value={this.state.value} 
+									onChange={this.handleChange}/>
+							</label>
+							<label>
+								Password: &nbsp;
+								<input type="password"/>
+							</label>
+						</div>
+						<div class="row">
+							<input type="submit" value="Login"/>
+						</div>
+						
 					</form>
 				</div>
 			);
 		}
 		else{
 			return(
-				<div>
-					<div> {this.state.files.map((item) => 
-						<li>
-							<a download href={"http://localhost:3010/file/"+item}>{item}</a>
-						</li>)} 
+				<div id="login-page">
+					<h1>Welcome, {this.state.value}</h1>
+					<p>Part of secure group: {String(this.state.authorised)} </p>
+					<h2>Encrypted files list: </h2>
+					<p>If you are not a part of the secure group, the file will not be decrypted.</p>
+					<div id="list-files"> {this.state.files.map((item) => 
+						<ListGroup>
+							<ListGroup.Item variant="dark" id ="item">
+								<a download href={"http://localhost:3010/file/"+item.filename+"/"+item.username}> {item.filename} </a>
+							</ListGroup.Item>
+							
+						</ListGroup>
+					)}
+						
 					</div>
-					<div class="container">
-						<div class="row">
-							<div class="col-md-6">
-								<form method="post" action="#" id="#">
-									<div class="form-group files">
-										<label>Upload Your File </label>
-										<input type="file" name="file" class="form-control" multiple="" onChange={this.onChangeHandler}/>
-									</div>
-								</form>
-							</div>
-						</div>
-						<div class="row">
-							<button type="button" class="btn btn-success btn-block" onClick={this.onClickHandler}>Upload</button>
-						</div>
-					</div>
-					<div>
-						<form onSubmit={this.handleUserUpload}>
-							<label>
-								Add user to group:
-								<input type="text" value ={this.state.addedUser}  onChange={this.handleUser}/>
-							</label>
-							<input type="submit" value="Add User"/>
-						</form>
-						<form onSubmit={this.handleRemoveUser}>
-							<label>
-								Remove user from group:
-								<input type="text" value={this.state.removedUser} onChange={this.handleRemovedUser} />
-							</label>
-							<input type="submit" value="Remover User"/>
-						</form>
-					</div>
+					<h2>Upload new files:</h2>
+						<p>You can only upload a file if you are part of the secure group.</p>
+					{upload}
+					
 				</div>
 			);	
 		}	

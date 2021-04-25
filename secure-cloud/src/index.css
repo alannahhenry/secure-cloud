@@ -5,6 +5,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #F0F8FF;
 }
 
 code {
@@ -41,7 +42,7 @@ code {
     background-size: 100%;
     background-repeat: no-repeat;
 }
-.color input{ background-color:#f1f1f1;}
+.color input{ background-color: #FFEBCD;}
 .files:before {
     position: absolute;
     bottom: 10px;
@@ -56,4 +57,36 @@ code {
     font-weight: 600;
     text-transform: capitalize;
     text-align: center;
+}
+
+#login-parent{
+  padding: 5% 0;
+}
+#login{
+  width: 80%;
+  display: inline-block;
+  text-align: center;
+  vertical-align: middle;
+  padding: 10% 0;
+}
+#list-files{
+  width: 100%;
+  display: inline-block;
+  text-align: center;
+  margin-top: 0.5em;
+}
+#item{
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+
+}
+#item:hover{
+  border: 1px solid darkgrey;
+}
+#upload{
+  text-align: center;
+}
+
+#user-interface{
+  padding: 0.5em;
 }
