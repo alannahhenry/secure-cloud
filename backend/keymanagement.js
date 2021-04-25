@@ -49,7 +49,7 @@ const getKeyPair = () => {
     }
     
 }
-function initSecret(){
+function initSecret(username){
     var iv = crypto.randomBytes(16)
     var key = crypto.randomBytes(32)
     
@@ -63,9 +63,9 @@ function initSecret(){
     return secret
 }
 
-function getSecret(){
-    if(fs.existsSync("key.txt") && fs.existsSync("iv.txt")){
-        var encryptedKey = fs.readFileSync("key.txt")
+function getSecret(username){
+    if(fs.existsSync("key-"+username+".txt") && fs.existsSync("iv.txt")){
+        var encryptedKey = fs.readFileSync("key-"+username+".txt")
         var iv = fs.readFileSync("iv.txt")
         return({
             iv: iv,
@@ -73,7 +73,7 @@ function getSecret(){
         })
     }
     else{
-        return initSecret()
+        return initSecret(username)
     }
 }
 

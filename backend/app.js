@@ -13,7 +13,7 @@ var bodyParser = require('body-parser')
 var multer = require('multer')
 var cors = require('cors')
 
-const secret = km.getSecret()
+
 /*{
   iv: Buffer.from('efb2da92cff888c9c295dc4ee682789c', 'hex'),
   key: Buffer.from('6245cb9b8dab1c1630bb3283063f963574d612ca6ec60bc8a5d1e07ddd3f7c53', 'hex')
@@ -40,6 +40,8 @@ app.use(
 );
 
 app.use(express.json());
+
+var secureCloudGroup = ["admin"];
 
 // stores file uploaded
 var storage = multer.diskStorage({
@@ -69,24 +71,41 @@ function decrypt(algorithm, buffer, key, iv) {
   console.log(km.getKeyPair())
   return decrypted;
 }
-function getEncryptedFilePath(filePath) {
-  return path.join(path.dirname(filePath), path.basename(filePath, path.extname(filePath))+ path.extname(filePath)+".enc")
+
+function getEncryptedFilePath(filePath, user) {
+  return path.join(path.dirname(filePath), path.basename(filePath, path.extname(filePath))+ path.extname(filePath)+"." +user+"enc")
 }
 
-function getDecryptedFileBaseName(fileName) {
-  return fileName.substring(0,fileName.length-4)
+function getDecryptedFileDetails(fileName) {
+  
+  //file.txt.adminenc
+  var split = fileName.split(".")
+  var remove = split[split.length-1] //adminenc
+  var rlength = remove.length
+  
+
+  //find position of last dot
+  
+  //split on that position
+
+  
+  return ({
+    filename:fileName.substring(0,fileName.length-(rlength+1)),
+    username: remove.substring(0,remove.length-3)
+  })
 }
 
-function getEncryptedFile(filePath, key, iv) {
-    filePath = getEncryptedFilePath(filePath);
+function getEncryptedFile(filePath, key, iv, user) {
+    filePath = getEncryptedFilePath(filePath, user);
     const encrypted = fs.readFileSync(filePath);
     const buffer = decrypt(CryptoAlgorithm, encrypted, key, iv);
     return buffer;
 }
-function saveEncryptedFile(buffer, filePath, key, iv) {
+
+function saveEncryptedFile(buffer, filePath, key, iv, user) {
   const encrypted = encrypt(CryptoAlgorithm, buffer, key, iv);
 
-  filePath = getEncryptedFilePath(filePath);
+  filePath = getEncryptedFilePath(filePath, user);
   if (!fs.existsSync(path.dirname(filePath))) {
       fs.mkdirSync(path.dirname(filePath))
   }
@@ -95,8 +114,9 @@ function saveEncryptedFile(buffer, filePath, key, iv) {
 }
 
 
-app.post('/upload/files',newUpload.single('file'), function(req, res){
- saveEncryptedFile(req.file.buffer, path.join("./files", req.file.originalname), secret.key, secret.iv);
+app.post('/upload/files' , newUpload.single('file'), function(req, res){
+const secret = km.getSecret(req.body.user)
+ saveEncryptedFile(req.file.buffer, path.join("./files", req.file.originalname), secret.key, secret.iv, req.body.user);
  res.status(201).json( { status: "ok" });
 
 })
@@ -104,11 +124,9 @@ app.post('/upload/files',newUpload.single('file'), function(req, res){
 
 
 app.post('/upload/user', (req, res) => {
-  console.log("Added "+req.body.user+ " to secure cloud group")
   secureCloudGroup.push(req.body.user)
   console.log(secureCloudGroup)
-  return res.status(200)
- 
+  return res.status(200) 
 })
 
 app.post("/remove/user", (req, res) => {
@@ -124,9 +142,20 @@ app.post("/remove/user", (req, res) => {
   
 
 })
-app.get("/file/:fileName", (req, res, next) => {
+
+app.get("/authorised/:user",  (req, res, next) => {
+  if(secureCloudGroup.includes(req.params.user)){
+    res.json({"authorised":true});
+  }else{
+    res.json({"authorised":false});
+  }
+});
+
+app.get("/file/:fileName/:username", (req, res, next) => {
+  console.log(req.params.username)
+  const secret = km.getSecret(req.params.username)
   console.log("Getting file:", req.params.fileName);
-  const buffer = getEncryptedFile(path.join("./files", req.params.fileName), secret.key, secret.iv);
+  const buffer = getEncryptedFile(path.join("./files", req.params.fileName), secret.key, secret.iv, req.params.username);
   const readStream = new stream.PassThrough();
   readStream.end(buffer);
   res.writeHead(200, {
@@ -145,12 +174,11 @@ function getFiles(){
 
   fs.readdirSync(directory).forEach(file =>{
     
-    files.push(getDecryptedFileBaseName(file))
+    files.push(getDecryptedFileDetails(file))
   });
   return files;
 }
 
-var secureCloudGroup = ["admin"];
 
 
 // configure app to use bodyParser()
