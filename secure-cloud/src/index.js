@@ -1,4 +1,5 @@
 import React from 'react';
+
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
@@ -114,7 +115,7 @@ class LoginForm extends React.Component{
 				<div>
 					<div> {this.state.files.map((item) => 
 						<li>
-							<a download href={"http://localhost:3010/"+item}>{item}</a>
+							<a download href={"http://localhost:3010/file/"+item}>{item}</a>
 						</li>)} 
 					</div>
 					<div class="container">
