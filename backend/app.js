@@ -1,27 +1,23 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var fs = require('fs');
-var crypto = require('crypto');
-var encryptor = require('file-encryptor');
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-const stream = require("stream");
+var km = require('./keymanagement.js')
+var createError = require('http-errors')
+var express = require('express')
+var path = require('path')
+var fs = require('fs')
+var crypto = require('crypto')
+
+const stream = require("stream")
 
 var app = express();
-var bodyParser = require('body-parser');
+var bodyParser = require('body-parser')
 
 var multer = require('multer')
-var cors = require('cors');
+var cors = require('cors')
 
-const key = 'test';
-const cipher = crypto.createCipher('aes-256-cbc', key);
-const decipher = crypto.createDecipher('aes-256-cbc', key);
-
-const secret = {
+const secret = km.getSecret()
+/*{
   iv: Buffer.from('efb2da92cff888c9c295dc4ee682789c', 'hex'),
   key: Buffer.from('6245cb9b8dab1c1630bb3283063f963574d612ca6ec60bc8a5d1e07ddd3f7c53', 'hex')
-}
+}*/
 const CryptoAlgorithm = "aes-256-cbc";
 
 
@@ -58,24 +54,27 @@ var storage = multer.diskStorage({
 })
 
 // upload instance and recieve single file
-var upload = multer({storage: storage}).single('file');
-
 var newUpload = multer({dest:'uploads/', storage: multer.memoryStorage()});
 
 function encrypt(algorithm, buffer, key, iv) {
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
-  const encrypted = Buffer.concat([cipher.update(buffer),cipher.final()]);
-  return encrypted;
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    const encrypted = Buffer.concat([cipher.update(buffer),cipher.final()]);
+    return encrypted;
 };
 
 
 function decrypt(algorithm, buffer, key, iv) {
   const decipher = crypto.createDecipheriv(algorithm, key, iv);
   const decrypted = Buffer.concat([decipher.update(buffer), decipher.final()]);
+  console.log(km.getKeyPair())
   return decrypted;
 }
 function getEncryptedFilePath(filePath) {
-  return path.join(path.dirname(filePath), path.basename(filePath, path.extname(filePath)) + "_encrypted" + path.extname(filePath))
+  return path.join(path.dirname(filePath), path.basename(filePath, path.extname(filePath))+ path.extname(filePath)+".enc")
+}
+
+function getDecryptedFileBaseName(fileName) {
+  return fileName.substring(0,fileName.length-4)
 }
 
 function getEncryptedFile(filePath, key, iv) {
@@ -97,18 +96,6 @@ function saveEncryptedFile(buffer, filePath, key, iv) {
 
 
 app.post('/upload/files',newUpload.single('file'), function(req, res){
-  /* upload(req, res, function (err){
-    if (err instanceof multer.MulterError){
-      console.log(err)
-      return res.status(500).json(err)
-    }
-    else if (err){
-      console.log(err)
-      return res.status(500).json(err)
-    }
-    
-  return res.status(200).send(req.file)
-  })  */
  saveEncryptedFile(req.file.buffer, path.join("./files", req.file.originalname), secret.key, secret.iv);
  res.status(201).json( { status: "ok" });
 
@@ -157,7 +144,8 @@ function getFiles(){
   var fs = require('fs');
 
   fs.readdirSync(directory).forEach(file =>{
-    files.push(file)
+    
+    files.push(getDecryptedFileBaseName(file))
   });
   return files;
 }
